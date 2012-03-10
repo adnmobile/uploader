@@ -1,0 +1,3 @@
+cd uploader
+npm install node-formidable
+npm install mime
