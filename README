@@ -1,3 +1,2 @@
 cd uploader
 npm install formidable
-npm install mime
