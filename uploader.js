@@ -1,102 +1,64 @@
 #!/usr/bin/env node
 
-var exec = require('child_process').exec;
 var http = require('http');
 var fs = require('fs');
 var formidable = require('formidable');
-var mime = require('mime');
 
-
-
+//Configuration
+var dataFolder = 'data/';
+var tmpFolder = 'tmp/';
+var rootHttp = 'http://localhost/data/'
 
 http.createServer(function (req, res) {
-	if(req.method === 'OPTIONS') {
-		res.writeHead(200, {'Access-Control-Allow-Origin': '*'});
-		res.end();
-	}
-	else if(req.method === 'POST') {
+  if(req.method === 'OPTIONS') {
+    res.writeHead(200, {'Access-Control-Allow-Origin': '*'});
+    res.end();
+  }
+  else if(req.method === 'POST') {
     var form = new formidable.IncomingForm();
-		form.encoding = 'utf-8';
-		form.uploadDir = '/home/plugsbee/upload/tmp';
-    form.on('file', function(name, file) {
-			var folder = '/home/plugsbee/media/'+name.split('/')[1];
-			var path = folder+'/'+file.name;
-			var split = file.name.split('.');
-			var thumbname = '/min_'+split[split.length-2]+'.png';
-			//FIXME use regex
-			//~ console.log(split[split.length-2]);
-			//~ console.log(split);
-			var thumb = folder+thumbname;
-			
-			fs.stat(folder, function (err) {
-				if (err) {
-					fs.mkdir(folder, 0755, function(err) {
-						if(err)
-							throw err;
-            else
-              rename();
-					});
-				}
-        else
-          rename();
-			});
-      function rename() {
-        fs.rename(file.path, path, function(err) {
-          if(err) {
-            console.log(err);
-            return;
-          }
-          
-          var type = mime.lookup(path);
-          var prefix = type.split('/')[0];
+    //~ form.encoding = 'utf-8';
+    form.uploadDir = tmpFolder;
+    form.on('file', function(key, file) {
 
-          if((prefix === 'image')||(type === 'application/pdf')) {
-            exec("convert '"+path+"\[0\]' -thumbnail 128x128\\> '"+thumb+"'", function (err, stdout, stderr) {
-              if(err) {
-                console.log(err);
-                return
-              }
-              var answer = {
-                src: 'http://media.plugsbee.com'+'/'+name.split('/')[1]+'/'+file.name,
-                thumbnail: 'http://media.plugsbee.com'+'/'+name.split('/')[1]+thumbname,
-              }	
-              res.writeHead(200, {
-                'Access-Control-Allow-Origin': '*',
-                'Content-Type': 'text/plain'
-              });
-              res.end(JSON.stringify(answer));
-            });
+      var folderId = key.split('/')[0];
+      var fileId = key.split('/')[1];
+
+      var fileExt = file.name.slice(file.name.lastIndexOf('.'), file.name.length);
+
+      var fileName = fileId + (fileExt || '');
+
+      var folderPath = dataFolder + folderId;
+      var filePath = folderPath + '/' + fileName;
+
+      fs.mkdir(folderPath, 0755, function(err) {
+        if (err) {
+          if (err.code !== 'EEXIST')
+            return console.log(err);
+
+          end();
+        }
+        else {
+          end();
+        }
+      });
+
+      function end() {
+        fs.rename(file.path, filePath, function(err) {
+          if(err)
+            return console.log(err);
+
+          var answer = {
+            src: rootHttp + folderId + '/' + fileName
           }
-          else if(prefix === 'video') {
-            exec("ffmpegthumbnailer -i '"+path+"' -o '"+thumb+"' -s 128", function(err, stdout, stderr) {
-              if(err) {
-                console.log(err);
-                return;
-              }
-              var answer = {
-                src: 'http://media.plugsbee.com'+'/'+name.split('/')[1]+'/'+file.name,
-                thumbnail: 'http://media.plugsbee.com'+'/'+name.split('/')[1]+thumbname,
-              }	
-              res.writeHead(200, {
-                'Access-Control-Allow-Origin': '*',
-                'Content-Type': 'text/plain'
-              });
-              res.end(JSON.stringify(answer));
-            });  
-          }
-          else {
-            var answer = {
-              src: 'http://media.plugsbee.com'+'/'+name.split('/')[1]+'/'+file.name,
-            }	
-            res.writeHead(200, {
-              'Access-Control-Allow-Origin': '*',
-              'Content-Type': 'text/plain'
-            });
-            res.end(JSON.stringify(answer));
-          }
+          console.log(answer.src);
+          res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'text/plain'
+          });
+          res.end(JSON.stringify(answer));
         });
       };
     });
     form.parse(req);
-	}
+  }
 }).listen(9090);
