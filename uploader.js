@@ -48,6 +48,8 @@ http.createServer(function (req, res) {
             return console.log(err);
 
           var answer = {
+            folder: folder,
+            file: fileId,
             src: rootHttp + folderId + '/' + fileName
           }
           console.log(answer.src);
