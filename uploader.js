@@ -20,12 +20,9 @@ http.createServer(function (req, res) {
     form.uploadDir = tmpFolder;
     form.on('file', function(key, file) {
 
-      var folderId = key.split('/')[0];
-      var fileId = key.split('/')[1];
-
-      var fileExt = file.name.slice(file.name.lastIndexOf('.'), file.name.length);
-
-      var fileName = fileId + (fileExt || '');
+      var folderId = Math.random();
+      var fileId = key.split('/')[0];
+      var fileName = encodeURIComponent(key.split('/')[1]);
 
       var folderPath = dataFolder + folderId;
       var filePath = folderPath + '/' + fileName;
@@ -48,11 +45,9 @@ http.createServer(function (req, res) {
             return console.log(err);
 
           var answer = {
-            folder: folder,
             file: fileId,
             src: rootHttp + folderId + '/' + fileName
           }
-          console.log(answer.src);
           res.writeHead(200, {
             'Access-Control-Allow-Origin': '*',
             'Content-Type': 'text/plain'
